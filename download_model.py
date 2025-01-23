@@ -1,91 +1,72 @@
 import json
 import requests
-import os
 from dotenv import load_dotenv
+import os
+import shutil
 
-def download_model(minio_url: str, model_minio_path: str, model_local_path: str, model_name: str, project_number: str):
-    config_str= "config.json"
-    with open(f"{project_number}/{config_str}", 'r', encoding='utf-8') as file:
-        config = json.load(file)
-
-    model_minio_path_with_model_name = f"{model_minio_path}/{model_name}"
-    model_local_path_with_model_name = f"{model_local_path}/{model_name}"
-
-    try:
-        # Descargar el modelo
-        response = requests.post(
-            f"{minio_url}/api/minio/download_from_models/",  # Asegúrate de que esta URL esté completa
-            data={'model_name': model_minio_path_with_model_name},
-        )
-        
-        # Verificar el estatus de la respuesta
-        if response.status_code != 200:
-            raise ValueError(f"Error al descargar el modelo: {response.status_code} - {response.text}")
-        
-        request_content = response.content
-        
-        # Guardar el modelo en la carpeta models
-        os.makedirs(model_local_path, exist_ok=True)
-        with open(model_local_path_with_model_name, 'wb') as model_file:
-            model_file.write(request_content)
-        
-        print(f"Modelo descargado en la ruta: {model_local_path_with_model_name}")
-    except Exception as e:
-        raise ValueError(f"No se pudo descargar el modelo: {e}")
-    
-    print("Modelo creado")
-    print("Creando encoder")
-    
-    # Descargar columnas
-    encoder_minio_path_with_column_name = f"random_forest_regression/encoder/{config['encoder_name']}"
-    encoder_local_path_with_column_name = f"{project_number}/models/{config['encoder_name']}"
-    
-    try:
-        # Descargar columnas
-        response = requests.post(
-            f"{minio_url}download_from_models/",  # Asegúrate de que esta URL esté completa
-            data={'model_name': encoder_minio_path_with_column_name},
-        )
-        
-        # Verificar el estatus de la respuesta
-        if response.status_code != 200:
-            raise ValueError(f"Error al descargar el encoder: {response.status_code} - {response.text}")
-        
-        request_content = response.content
-        
-        # Crear el directorio de destino si no existe
-        os.makedirs(os.path.dirname(encoder_local_path_with_column_name), exist_ok=True)
-        
-        # Guardar las columnas en la carpeta columns
-        with open(encoder_local_path_with_column_name, 'wb') as encoder_file:
-            encoder_file.write(request_content)
-        
-        print(f"encoder descargado en la ruta: {encoder_local_path_with_column_name}")
-    except Exception as e:
-        raise ValueError(f"No se pudo descargar el encoder: {e}")
-
-if __name__ == "__main__":
-    config_str = "config.json"
-    with open(config_str, 'r', encoding='utf-8') as file:
-        config = json.load(file)
-    
-    # Ruta del proyecto
-    ruta = config["proyect"]
-    
-    with open(f"{ruta}/{config_str}", 'r', encoding='utf-8') as file:
-        config = json.load(file)
-    
+def download_model(input_model_name, output_model_name, dir_path=None, timeout=30):
     load_dotenv()
-    
-    # Obtener la URL desde el archivo .env
+
     minio_url = os.getenv('MINIO_URL')
     if not minio_url:
         raise ValueError("La variable de entorno MINIO_URL no está definida")
-    
-    model_minio_path = "random_forest_regression/models"
-    model_local_path = f"{ruta}/models"
-    model_name =  f'{config["name_model"]}'
 
-    
+    print("Descargando Modelo")
 
-    download_model(minio_url, model_minio_path, model_local_path, model_name, ruta)
+    url = f'http://{minio_url}/api/minio/download_from_models/'
+    try:
+        response = requests.post(url,data={'model_name': input_model_name},timeout=timeout)
+        if response.status_code == 200:
+            file_name = output_model_name
+            if dir_path:file_name = f"{dir_path}/{output_model_name}"
+            with open(file_name, 'wb') as file:
+                file.write(response.content)
+
+            if not os.path.exists(f"{dir_path}/model"):os.mkdir(f"{dir_path}/model")
+
+            shutil.unpack_archive(f"{dir_path}/model/model.zip", dir_path)
+
+            os.unlink(f"{dir_path}/model.zip")
+
+            print(f"File downloaded and saved successfully as '{file_name}'")
+        else:
+            print(f"Error: {response.status_code}")
+            print(response.json())
+    except Exception as e:
+        print(f"Request failed: {str(e)}")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+def fuctions_execute(config_json_path: str):
+    # Leer el archivo de configuración
+    with open(config_json_path, 'r', encoding='utf-8') as file:
+        config = json.load(file)
+
+    #Ruta del proyecto
+    ruta = config["proyect"]
+    with open(f"{ruta}/{config_json_path}", 'r', encoding='utf-8') as file:
+        config = json.load(file)
+        
+    # Usar los valores del archivo JSON
+    download_data = [
+        {
+            "name":config["name_model"],
+            "path":f"{ruta}/models_saved/{config['name_model']}"
+        },
+        {
+            "name":config["column_model"],
+            "path":f"{ruta}/models_saved/{config['column_model']}"
+        },
+    ]
+    for i in download_data:
+        download_model(i["path"], i["name"], dir_path=f"{ruta}/models_saved", timeout=30000)
+
+
+def main():
+
+    config_json_path = "config.json"
+
+    result = fuctions_execute(config_json_path)
+
+if __name__ == "__main__":
+    main()
