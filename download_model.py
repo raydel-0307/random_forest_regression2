@@ -50,12 +50,12 @@ def fuctions_execute(config_json_path: str):
     # Usar los valores del archivo JSON
     download_data = [
         {
-            "name":config["name_model"].split('.')[0],
-            "path":f"{ruta}/models_saved/{config['name_model']}"
+            "name":config["name_model"],
+            "path":f"{config['name_model'].split(".")[0]}/models/model.pkl"
         },
         {
-            "name":config["column_model"].split('.')[0],
-            "path":f"{ruta}/models_saved/{config['column_model']}"
+            "name":config["column_model"],
+            "path":f"{config['column_model'].split(".")[0]}/models/model.pkl"
         },
     ]
     for i in download_data:

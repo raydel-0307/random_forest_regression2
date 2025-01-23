@@ -51,23 +51,8 @@ def main():
     
     # Verificar si el modelo existe en la ruta especificada
     if not os.path.exists(model_path):
-        print("Descargando el modelo...")
-
-        try:
-            from download_model import download_model
-
-            model_minio_path = "random_forest_regression/models"
-            model_local_path = f"{project_number}/models_saved"
-            model_name = f'{config["name_model"]}'
-
-            column_minio_path = "random_forest_regression/columns"
-            column_local_path = f"{project_number}/models_saved"
-            column_name = f'{config["column_model"]}'
-
-            # Ajuste en la llamada a download_model
-            download_model(minio_url, model_minio_path, model_local_path, model_name, column_minio_path, column_local_path, column_name)
-        except Exception as e:
-            raise ValueError(f"No se pudo descargar el modelo: {e}")
+        print("Descargue el modelo primeramente")
+        return
 
     # Aquí, pasamos config y data ya como diccionarios
     result = fuctions_execute(config, data, project_number)
