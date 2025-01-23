@@ -22,12 +22,6 @@ def download_model(input_model_name, output_model_name, dir_path=None, timeout=3
             with open(file_name, 'wb') as file:
                 file.write(response.content)
 
-            if not os.path.exists(f"{dir_path}/model"):os.mkdir(f"{dir_path}/model")
-
-            shutil.unpack_archive(f"{dir_path}/model/model.zip", dir_path)
-
-            os.unlink(f"{dir_path}/model.zip")
-
             print(f"File downloaded and saved successfully as '{file_name}'")
         else:
             print(f"Error: {response.status_code}")
