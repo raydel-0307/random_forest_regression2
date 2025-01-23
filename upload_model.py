@@ -45,11 +45,11 @@ def fuctions_execute(config_json_path: str):
     # Usar los valores del archivo JSON
     upload_data = [
         {
-            "name":config["name_model"],
+            "name":config["name_model"].split('.')[0],
             "path":f"{ruta}/models_saved/{config['name_model']}"
         },
         {
-            "name":config["column_model"],
+            "name":config["column_model"].split('.')[0],
             "path":f"{ruta}/models_saved/{config['column_model']}"
         },
     ]
