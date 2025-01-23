@@ -1,72 +1,69 @@
-import os
-import requests
 import json
+import os
 from dotenv import load_dotenv
+import requests
 
-
-def upload_model(minio_url: str, model_minio_path: str, model_local_path: str, model_name: str, column_name: str, project_number: str):
-    # Construir rutas completas
-    model_local_path_with_model_name = os.path.join(project_number, model_local_path, model_name)
-    column_local_path_with_column_name = os.path.join(project_number, model_local_path, column_name)
-    model_minio_path_with_model_name = f"{model_minio_path}/{model_name}"
-    column_minio_path_with_column_name = f"{model_minio_path}/columns/{column_name}"
-
-    # Leer el modelo
-    try:
-        with open(model_local_path_with_model_name, 'rb') as f:
-            model = f.read()
-    except FileNotFoundError:
-        raise ValueError(f"El archivo del modelo no se encontró: {model_local_path_with_model_name}")
-
-    # Subir el modelo al servidor MinIO
-    try:
-        response = requests.post(
-            url=f"{minio_url}upload_to_models/",
-            files={'file': ("model_rfr", model, 'application/zip')},
-            data={'object_name': model_minio_path_with_model_name},
-        )
-        print("Modelo subido:", response.json())
-    except Exception as e:
-        raise ValueError(f"No se pudo subir el modelo: {e}")
-
-    # Leer las columnas
-    try:
-        with open(column_local_path_with_column_name, 'rb') as f:
-            column = f.read()
-    except FileNotFoundError:
-        raise ValueError(f"El archivo de las columnas no se encontró: {column_local_path_with_column_name}")
-
-    # Subir las columnas al servidor MinIO
-    try:
-        response = requests.post(
-            url=f"{minio_url}/api/minio/upload_to_models/",
-            files={'file': ("column_rfr", column, 'application/zip')},
-            data={'object_name': column_minio_path_with_column_name},
-        )
-        print("Columnas subidas:", response.json())
-    except Exception as e:
-        raise ValueError(f"No se pudo subir las columnas: {e}")
-
-
-if __name__ == "__main__":
-    # Cargar variables de entorno desde el archivo .env
+def upload_model(model_name,model_path,timeout=30):
     load_dotenv()
 
-    # Leer la configuración desde config.json
-    config_str = "config.json"
-    with open(config_str, 'r', encoding='utf-8') as file:
-        config = json.load(file)
-
-    # Obtener variables desde el archivo .env y la configuración
     minio_url = os.getenv('MINIO_URL')
     if not minio_url:
         raise ValueError("La variable de entorno MINIO_URL no está definida")
 
-    model_minio_path = "random_forest_regression/models"
-    model_local_path = "models"
-    model_name = config["name_model"]
-    column_name = config.get("column_model", "default_column_name")
-    project_number = config["proyect"]
+    if not model_path:
+        print("No se ingresó ninguna ruta de archivo.")
+        exit()
+    with open(model_path, 'rb') as file:
+        file_data = file.read()
+    url = f'http://{minio_url}/api/minio/upload_to_models/'
+    try:
+        files = {'file': (model_path, file_data, 'application/octet-stream')}
+        response = requests.post(url,files=files,data={'object_name': f"{model_name}/models/model.pkl"},timeout=timeout)
+        if response.status_code == 200:
+            print("Archivo subido exitosamente")
+            print(response.json())
+            os.unlink(model_path)
+        else:
+            print(f"Error: {response.status_code}")
+            print(response.json())
 
-    # Subir modelo y columnas
-    upload_model(minio_url, model_minio_path, model_local_path, model_name, column_name, project_number)
+    except Exception as e:
+        print(f"Fallo en la solicitud: {str(e)}")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+def fuctions_execute(config_json_path: str):
+    # Leer el archivo de configuración
+    with open(config_json_path, 'r', encoding='utf-8') as file:
+        config = json.load(file)
+
+    #Ruta del proyecto
+    ruta = config["proyect"]
+    with open(f"{ruta}/{config_json_path}", 'r', encoding='utf-8') as file:
+        config = json.load(file)
+        
+    # Usar los valores del archivo JSON
+    upload_data = [
+        {
+            "name":config["name_model"],
+            "path":f"{ruta}/models_saved/{config['name_model']}"
+        },
+        {
+            "name":config["column_model"],
+            "path":f"{ruta}/models_saved/{config['column_model']}"
+        },
+    ]
+
+    for i in upload_data:
+        for name,path in upload_data[i].items():
+            print("Subiendo Modelo")
+            upload_model(name,path,timeout=300000)
+
+def main():
+
+    config_json_path = "config.json"
+
+    result = fuctions_execute(config_json_path)
+
+if __name__ == "__main__":
+    main()
