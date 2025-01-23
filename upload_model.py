@@ -55,7 +55,7 @@ def fuctions_execute(config_json_path: str):
     ]
 
     for i in upload_data:
-        for name,path in upload_data[i].items():
+        for name,path in i.items():
             print("Subiendo Modelo")
             upload_model(name,path,timeout=300000)
 
