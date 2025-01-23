@@ -14,7 +14,7 @@ def download_model(minio_url: str, model_minio_path: str, model_local_path: str,
     try:
         # Descargar el modelo
         response = requests.post(
-            f"{minio_url}download_from_models/",  # Asegúrate de que esta URL esté completa
+            f"{minio_url}/api/minio/download_from_models/",  # Asegúrate de que esta URL esté completa
             data={'model_name': model_minio_path_with_model_name},
         )
         

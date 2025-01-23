@@ -39,7 +39,7 @@ def upload_model(minio_url: str, model_minio_path: str, model_local_path: str, m
     # Subir las columnas al servidor MinIO
     try:
         response = requests.post(
-            url=f"{minio_url}upload_to_models/",
+            url=f"{minio_url}/api/minio/upload_to_models/",
             files={'file': ("column_rfr", column, 'application/zip')},
             data={'object_name': column_minio_path_with_column_name},
         )
